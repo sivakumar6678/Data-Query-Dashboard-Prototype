@@ -1,12 +1,28 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { processQuery } from '../services/geminiService';
+import { getSQLQueryFromGemini } from '../services/geminiService';
+import { runDatabaseQuery } from '../services/LocalDataProcessor';
 
-export const submitQuery = createAsyncThunk(
-  'query/submitQuery',
-  async (query, { rejectWithValue }) => {
+// Load query mode from Local Storage
+const loadQueryMode = () => {
+  return localStorage.getItem("queryMode") || "local"; // Default to local mode
+};
+
+// Async thunk for processing queries
+export const processQuery = createAsyncThunk(
+  'query/processQuery',
+  async ({ query, mode }, { rejectWithValue }) => {
     try {
-      const response = await processQuery(query);
-      return response;
+      if (!query || typeof query !== 'string' || !query.trim()) {
+        throw new Error('Please enter a valid query');
+      }
+
+      if (mode === 'ai') {
+        const sqlQuery = await getSQLQueryFromGemini(query);
+        return sqlQuery;
+      } else {
+        const result = await runDatabaseQuery(query);
+        return result;
+      }
     } catch (error) {
       return rejectWithValue(error.message);
     }
@@ -14,56 +30,50 @@ export const submitQuery = createAsyncThunk(
 );
 
 const initialState = {
-  currentQuery: '',
+  mode: 'local',
+  query: '',
   loading: false,
   error: null,
-  results: null,
-  rateLimit: {
-    remaining: 15,
-    resetTime: null,
-  },
+  result: null
 };
 
 const querySlice = createSlice({
   name: 'query',
   initialState,
   reducers: {
-    setCurrentQuery: (state, action) => {
-      state.currentQuery = action.payload;
+    setMode: (state, action) => {
+      state.mode = action.payload;
       state.error = null;
     },
-    clearResults: (state) => {
-      state.results = null;
+    setQuery: (state, action) => {
+      state.query = action.payload;
       state.error = null;
     },
-    updateRateLimit: (state, action) => {
-      state.rateLimit = action.payload;
+    clearError: (state) => {
+      state.error = null;
     },
+    clearResult: (state) => {
+      state.result = null;
+    }
   },
   extraReducers: (builder) => {
     builder
-      .addCase(submitQuery.pending, (state) => {
+      .addCase(processQuery.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(submitQuery.fulfilled, (state, action) => {
+      .addCase(processQuery.fulfilled, (state, action) => {
         state.loading = false;
-        state.results = action.payload;
-        // Update rate limit
-        if (state.rateLimit.remaining > 0) {
-          state.rateLimit.remaining -= 1;
-        }
+        state.result = action.payload;
+        state.error = null;
       })
-      .addCase(submitQuery.rejected, (state, action) => {
+      .addCase(processQuery.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
-        if (action.payload.includes('Rate limit exceeded')) {
-          state.rateLimit.remaining = 0;
-          state.rateLimit.resetTime = Date.now() + 60000; // Reset after 1 minute
-        }
+        state.error = action.payload || 'Failed to process query';
+        state.result = null;
       });
-  },
+  }
 });
 
-export const { setCurrentQuery, clearResults, updateRateLimit } = querySlice.actions;
-export default querySlice.reducer; 
+export const { setMode, setQuery, clearError, clearResult } = querySlice.actions;
+export default querySlice.reducer;

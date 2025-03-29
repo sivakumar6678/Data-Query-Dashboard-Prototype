@@ -1,10 +1,18 @@
-import { configureStore } from '@reduxjs/toolkit';
-import queryReducer from './querySlice';
-import historyReducer from './historySlice';
+import { configureStore } from "@reduxjs/toolkit";
+import queryReducer from "./querySlice";
+import historyReducer from "./historySlice";
+import suggestionsReducer from "./suggestionsSlice";
 
-export const store = configureStore({
+const store = configureStore({
   reducer: {
     query: queryReducer,
     history: historyReducer,
+    suggestions: suggestionsReducer,
   },
-}); 
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: false,
+    }),
+});
+
+export default store;

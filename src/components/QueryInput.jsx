@@ -1,112 +1,191 @@
-import React, { useState } from 'react';
-import { Box, TextField, Button, Autocomplete, Paper, Typography, Chip, Alert, CircularProgress } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  TextField,
+  Button,
+  Paper,
+  Typography,
+  IconButton,
+  Tooltip,
+  CircularProgress,
+  Alert,
+  useTheme,
+  useMediaQuery,
+} from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
-import { setCurrentQuery, submitQuery } from '../store/querySlice';
+import { processQuery, setQuery, clearError, clearResult } from '../store/querySlice';
 import { addQuery } from '../store/historySlice';
-import SearchIcon from '@mui/icons-material/Search';
-
-const AI_SUGGESTIONS = [
-  "Show me sales trends for the last quarter",
-  "Compare revenue between departments",
-  "Display customer satisfaction metrics",
-  "Analyze product performance by category",
-  "Show monthly growth rate",
-  "Compare year-over-year metrics",
-];
+import SendIcon from '@mui/icons-material/Send';
+import ClearIcon from '@mui/icons-material/Clear';
+import HelpIcon from '@mui/icons-material/Help';
 
 const QueryInput = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
   const dispatch = useDispatch();
-  const { currentQuery, loading, error } = useSelector((state) => state.query);
-  const { queries } = useSelector((state) => state.history);
-  const [suggestions, setSuggestions] = useState([]);
+  const { query, loading, error, mode } = useSelector((state) => state.query);
+  const [localQuery, setLocalQuery] = useState('');
+  const [localError, setLocalError] = useState(null);
 
-  const handleQueryChange = (_, newValue) => {
-    dispatch(setCurrentQuery(newValue));
-    if (newValue) {
-      const filtered = AI_SUGGESTIONS.filter(suggestion =>
-        suggestion.toLowerCase().includes(newValue.toLowerCase())
-      );
-      setSuggestions(filtered);
-    } else {
-      setSuggestions([]);
+  // Sync local state with Redux state
+  useEffect(() => {
+    setLocalQuery(query);
+  }, [query]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLocalError(null);
+    dispatch(clearError());
+    dispatch(clearResult());
+    
+    const trimmedQuery = localQuery.trim();
+    if (!trimmedQuery) {
+      setLocalError('Please enter a query');
+      return;
+    }
+
+    try {
+      // Add to history first
+      dispatch(addQuery({
+        text: trimmedQuery,
+        mode,
+        timestamp: new Date().toISOString(),
+        status: 'pending'
+      }));
+
+      // Process the query
+      await dispatch(processQuery({ query: trimmedQuery, mode })).unwrap();
+      
+      // Clear the input
+      setLocalQuery('');
+      dispatch(setQuery(''));
+    } catch (error) {
+      console.error('Error processing query:', error);
+      setLocalError(error.message || 'Failed to process query');
     }
   };
 
-  const handleQuerySubmit = async () => {
-    if (!currentQuery.trim()) return;
+  const handleChange = (e) => {
+    const newQuery = e.target.value;
+    setLocalQuery(newQuery);
+    dispatch(setQuery(newQuery));
+    setLocalError(null);
+    dispatch(clearError());
+  };
 
-    try {
-      const result = await dispatch(submitQuery(currentQuery)).unwrap();
-      dispatch(addQuery({ query: currentQuery, results: result }));
-    } catch (error) {
-      console.error('Failed to process query:', error);
-    }
+  const handleClear = () => {
+    setLocalQuery('');
+    dispatch(setQuery(''));
+    dispatch(clearError());
+    dispatch(clearResult());
+    setLocalError(null);
   };
 
   return (
-    <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        AI-Powered Query Dashboard
-      </Typography>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Autocomplete
-            freeSolo
-            options={[...queries.map(q => q.query), ...AI_SUGGESTIONS]}
-            value={currentQuery}
-            onChange={handleQueryChange}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Ask your data question"
-                variant="outlined"
-                fullWidth
-                placeholder="e.g., Show me sales data for last month"
-                InputProps={{
-                  ...params.InputProps,
-                  startAdornment: <SearchIcon sx={{ mr: 1, color: 'action.active' }} />,
-                }}
-                disabled={loading}
-              />
-            )}
-            sx={{ flex: 1 }}
+    <Paper 
+      sx={{ 
+        p: { xs: 1.5, sm: 2, md: 2.5 },
+        mb: { xs: 1, sm: 2 },
+        width: { xs: '100%', sm: '90%', md: '80%' },
+        mx: 'auto',
+        borderRadius: '12px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+        transition: 'all 0.3s ease-in-out',
+        '&:hover': {
+          boxShadow: '0 6px 16px rgba(0,0,0,0.1)'
+        }
+      }}
+    >
+      <form onSubmit={handleSubmit}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'flex-start', 
+          gap: { xs: 0.5, sm: 1 },
+          width: '100%'
+        }}>
+          <TextField
+            fullWidth
+            multiline
+            rows={isMobile ? 1 : 2}
+            variant="outlined"
+            placeholder="Enter your query here..."
+            value={localQuery}
+            onChange={handleChange}
+            error={!!(error || localError)}
+            helperText={error || localError}
             disabled={loading}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px',
+                fontSize: { xs: '0.9rem', sm: '1rem' },
+                '&:hover fieldset': {
+                  borderColor: 'primary.main',
+                },
+              },
+              '& .MuiInputBase-multiline': {
+                padding: { xs: '8px', sm: '12px' },
+              }
+            }}
+            InputProps={{
+              endAdornment: localQuery && (
+                <IconButton
+                  size="small"
+                  onClick={handleClear}
+                  sx={{ 
+                    position: 'absolute', 
+                    right: 8, 
+                    top: 8,
+                    color: 'text.secondary',
+                    '&:hover': {
+                      color: 'error.main'
+                    }
+                  }}
+                >
+                  <ClearIcon />
+                </IconButton>
+              ),
+            }}
           />
-          <Button
-            variant="contained"
-            onClick={handleQuerySubmit}
-            disabled={!currentQuery.trim() || loading}
-            size="large"
-            sx={{ minWidth: 120 }}
-          >
-            {loading ? (
-              <CircularProgress size={24} color="inherit" />
-            ) : (
-              'Analyze'
-            )}
-          </Button>
+          <Tooltip title="Submit query">
+            <span>
+              <IconButton
+                type="submit"
+                color="primary"
+                disabled={loading || !localQuery.trim()}
+                sx={{ 
+                  alignSelf: 'flex-end',
+                  mb: { xs: 0.5, sm: 1 },
+                  backgroundColor: theme.palette.primary.main,
+                  color: theme.palette.primary.contrastText,
+                  width: { xs: 36, sm: 40 },
+                  height: { xs: 36, sm: 40 },
+                  '&:hover': {
+                    backgroundColor: theme.palette.primary.dark,
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                  },
+                  '&:disabled': {
+                    backgroundColor: theme.palette.action.disabledBackground,
+                    color: theme.palette.action.disabled,
+                  }
+                }}
+              >
+                {loading ? (
+                  <CircularProgress 
+                    size={isMobile ? 20 : 24} 
+                    color="inherit" 
+                  />
+                ) : (
+                  <SendIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
+                )}
+              </IconButton>
+            </span>
+          </Tooltip>
         </Box>
-        {suggestions.length > 0 && (
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-            {suggestions.map((suggestion, index) => (
-              <Chip
-                key={index}
-                label={suggestion}
-                onClick={() => dispatch(setCurrentQuery(suggestion))}
-                sx={{ m: 0.5 }}
-                disabled={loading}
-              />
-            ))}
-          </Box>
-        )}
-      </Box>
+      </form>
     </Paper>
   );
 };
 
-export default QueryInput; 
+export default QueryInput;
