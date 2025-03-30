@@ -1,10 +1,10 @@
 import axios from 'axios';
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
-if (!GEMINI_API_KEY) {
-  console.error('VITE_GEMINI_API_KEY is not defined in environment variables');
+if (!apiKey) {
+  throw new Error("VITE_GEMINI_API_KEY is not defined");
 }
 
 const systemPrompt = `You are a business analytics assistant. Analyze the query and provide insights with multiple charts and detailed data visualization.
@@ -108,13 +108,13 @@ For sales analysis:
 }`;
 
 export const geminiService = async (query) => {
-  if (!GEMINI_API_KEY) {
+  if (!apiKey) {
     throw new Error('API key not configured. Please add VITE_GEMINI_API_KEY to your .env file');
   }
 
   try {
     const response = await axios.post(
-      `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
+      `${GEMINI_API_URL}?key=${apiKey}`,
       {
         contents: [
           {
