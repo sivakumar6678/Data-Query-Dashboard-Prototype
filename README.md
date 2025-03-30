@@ -5,9 +5,13 @@ A modern, responsive web application built with React, Vite, and Material-UI tha
 ## 🌍 Live Demo
 Try the live version here: **https://data-query-dashboard-prototype-rho.vercel.app/**
 
-## 📸 Screenshots
-![Homepage](./screenshots/homepage.png)
-![Query Input](./screenshots/query-input.png)
+## 🚀 Quick Start Guide
+- ✅ **Step 1**: Enter a query in the input box.
+- ✅ **Step 2**: Select a query mode (Local Data / AI Query).
+- ✅ **Step 3**: Click **"Ask AI"** to process the query.
+- ✅ **Step 4**: View detailed results, charts, and analysis.
+- ✅ **Step 5**: Check query history or clear previous results.
+
 
 ## 🌟 Features
 
@@ -82,6 +86,10 @@ yarn dev
 
 4. Open your browser and navigate to `http://localhost:5173`
 
+## 🔧 Environment Variables
+Create a `.env` file in the root directory and add:
+REACT_APP_GEMINI_API_KEY=your-api-key
+
 ## 📱 Responsive Design
 
 The application is fully responsive and optimized for:
@@ -113,8 +121,7 @@ The application uses a custom Material-UI theme with:
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📄 License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 
 ## 👥 Authors
 - Your Name - Initial work
