@@ -23,12 +23,12 @@ const QueryModeSelector = () => {
       >
         <Tooltip title="Query local data">
           <ToggleButton value="local" aria-label="local mode">
-            Local Data
+            Manual 
           </ToggleButton>
         </Tooltip>
         <Tooltip title="Use AI for query suggestions">
           <ToggleButton value="ai" aria-label="ai mode">
-            AI Assistant
+            Advanced
           </ToggleButton>
         </Tooltip>
       </ToggleButtonGroup>
